@@ -1,0 +1,45 @@
+{
+  "train": [
+    "Scene-01-20260416-C3M2_Tcol_1-A01Export-01_c1-4_stack.tif",
+    "Scene-04-20260416-C3M2_Tcol_3-A01Export-06_c1-4_stack.tif",
+    "Scene-05-20260416-C3M2_Pcol_2-A01Export-07_c1-4_stack.tif",
+    "Scene-06-20260416-C3M2_Pcol_1-A01Export-08_c1-4_stack.tif",
+    "Scene-09-20260416-C3M2_Dcol_3-A01Export-11_c1-4_stack.tif",
+    "Scene-10-20260416-C3M3_Pcol_1-A02Export-12_c1-4_stack.tif",
+    "Scene-11-20260416-C3M3_Dcol_3-A02Export-13_c1-4_stack.tif",
+    "Scene-12-20260416-C3M3_Pcol_2-A02Export-14_c1-4_stack.tif",
+    "Scene-13-20260416-C3M3_Pcol_3-A02Export-15_c1-4_stack.tif",
+    "Scene-16-20260416-C3M3_Tcol_3-A02Export-18_c1-4_stack.tif",
+    "Scene-18-20260416-C3M3_Tcol_1-A02Export-20_c1-4_stack.tif",
+    "Scene-19-20260416-C4M3_Pcol_3-A03Export-21_c1-4_stack.tif",
+    "Scene-20-20260416-C4M3_Pcol_2-A03Export-22_c1-4_stack.tif",
+    "Scene-22-20260416-C4M3_Dcol_3-A03Export-24_c1-4_stack.tif",
+    "Scene-24-20260416-C4M3_Dcol_2-A03Export-26_c1-4_stack.tif",
+    "Scene-25-20260416-C4M3_Tcol_3-A03Export-27_c1-4_stack.tif",
+    "Scene-26-20260416-C4M3_Tcol_2-A03Export-28_c1-4_stack.tif",
+    "Scene-27-20260416-C4M3_Dcol_1-A03Export-29_c1-4_stack.tif",
+    "Scene-28-20260416-C5M2_Dcol_3-A04Export-30_c1-4_stack.tif",
+    "Scene-29-20260416-C5M2_Dcol_2-A04Export-31_c1-4_stack.tif",
+    "Scene-31-20260416-C5M2_Dcol_1-A04Export-33_c1-4_stack.tif",
+    "Scene-32-20260416-C5M2_Pcol_2-A04Export-34_c1-4_stack.tif",
+    "Scene-33-20260416-C5M2_Pcol_3-A04Export-35_c1-4_stack.tif",
+    "Scene-35-20260416-C5M2_Tcol_1-A04Export-37_c1-4_stack.tif",
+    "Scene-36-20260416-C5M2_Tcol_2-A04Export-03_c1-4_stack.tif"
+  ],
+  "val": [
+    "Scene-02-20260416-C3M2_Tcol_2-A01Export-04_c1-4_stack.tif",
+    "Scene-03-20260416-C3M2_Pcol_3-A01Export-05_c1-4_stack.tif",
+    "Scene-21-20260416-C4M3_Pcol_1-A03Export-23_c1-4_stack.tif",
+    "Scene-23-20260416-C4M3_Tcol_1-A03Export-25_c1-4_stack.tif",
+    "Scene-30-20260416-C5M2_Pcol_1-A04Export-32_c1-4_stack.tif",
+    "Scene-34-20260416-C5M2_Tcol_3-A04Export-36_c1-4_stack.tif"
+  ],
+  "test": [
+    "Scene-01-20260416-C3M2_Tcol_1-A01Export-02_c1-4_stack.tif",
+    "Scene-07-20260416-C3M2_Dcol_1-A01Export-09_c1-4_stack.tif",
+    "Scene-08-20260416-C3M2_Dcol_2-A01Export-10_c1-4_stack.tif",
+    "Scene-14-20260416-C3M3_Dcol_2-A02Export-16_c1-4_stack.tif",
+    "Scene-15-20260416-C3M3_Dcol_1-A02Export-17_c1-4_stack.tif",
+    "Scene-17-20260416-C3M3_Tcol_2-A02Export-19_c1-4_stack.tif"
+  ]
+}

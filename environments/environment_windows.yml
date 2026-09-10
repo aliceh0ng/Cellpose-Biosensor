@@ -1,0 +1,22 @@
+name: cellpose
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - scikit-image
+  - tifffile
+  - imagecodecs
+  - pip:
+    # Driver 560.94 → CUDA 12.6 → use cu124 build (closest available, fully compatible)
+    - torch==2.4.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
+    - torchvision==0.19.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
+    - cellpose[gui]==4.1.1
+    - natsort
