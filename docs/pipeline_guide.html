@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cellpose-SAM Pipeline Guide</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222636;
+      --border: #2e3348;
+      --text: #dde1f0;
+      --muted: #8890aa;
+      --accent-blue: #4f8ef7;
+      --accent-green: #4aad6e;
+      --accent-orange: #e8894a;
+      --accent-red: #d95f5f;
+      --accent-purple: #9b7fe8;
+      --code-bg: #12151f;
+      --tag-bg: #2a3050;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      padding: 0 0 80px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 36px 48px 32px;
+    }
+    header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { color: var(--muted); margin-top: 8px; font-size: 0.95rem; max-width: 640px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 12px;
+      margin-right: 6px;
+      background: var(--tag-bg);
+      color: var(--accent-blue);
+      border: 1px solid var(--accent-blue);
+    }
+    .badge.green  { color: var(--accent-green);  border-color: var(--accent-green);  }
+    .badge.orange { color: var(--accent-orange); border-color: var(--accent-orange); }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── TOC ─────────────────────────────────────────────────────────────── */
+    nav.toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 28px;
+      margin: 36px 0 0;
+    }
+    nav.toc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+    nav.toc ol { padding-left: 20px; }
+    nav.toc li { margin: 5px 0; }
+    nav.toc a  { color: var(--accent-blue); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    nav.toc ol ol { margin-top: 4px; }
+    nav.toc ol ol li { font-size: 0.9em; color: var(--muted); }
+    nav.toc ol ol a  { color: var(--muted); }
+
+    /* ── Sections ────────────────────────────────────────────────────────── */
+    section {
+      margin-top: 52px;
+    }
+    section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    section h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+    section h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 22px 0 8px;
+    }
+    p { margin: 10px 0; color: var(--text); }
+    ul, ol { padding-left: 22px; margin: 8px 0; }
+    li { margin: 5px 0; }
+
+    /* ── Code ────────────────────────────────────────────────────────────── */
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: #c9d1e8;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 14px 0;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+      font-size: 0.83em;
+      line-height: 1.6;
+    }
+    pre code { background: none; border: none; padding: 0; font-size: 1em; }
+    .comment { color: #5a6280; }
+    .kw { color: #7eb8f7; }
+    .str { color: #81c88a; }
+    .num { color: #e8a45a; }
+
+    /* ── Callouts ────────────────────────────────────────────────────────── */
+    .callout {
+      border-left: 3px solid var(--accent-blue);
+      background: var(--surface2);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+    }
+    .callout.warn  { border-color: var(--accent-orange); }
+    .callout.danger{ border-color: var(--accent-red); }
+    .callout.tip   { border-color: var(--accent-green); }
+    .callout-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+      color: var(--accent-blue);
+    }
+    .callout.warn   .callout-title { color: var(--accent-orange); }
+    .callout.danger .callout-title { color: var(--accent-red); }
+    .callout.tip    .callout-title { color: var(--accent-green); }
+
+    /* ── Pipeline diagram ────────────────────────────────────────────────── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .pipe-step {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      text-align: center;
+      min-width: 110px;
+    }
+    .pipe-step .step-label { color: var(--muted); font-size: 0.7rem; margin-bottom: 2px; }
+    .pipe-step .step-name  { font-weight: 600; }
+    .pipe-arrow {
+      font-size: 1.2rem;
+      color: var(--muted);
+      padding: 0 6px;
+    }
+
+    /* ── Table ───────────────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.88rem;
+    }
+    th {
+      background: var(--surface2);
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    td code { font-size: 0.8em; }
+
+    /* ── Step list ───────────────────────────────────────────────────────── */
+    .steps { list-style: none; padding-left: 0; counter-reset: step-counter; }
+    .steps > li {
+      counter-increment: step-counter;
+      padding: 14px 0 14px 52px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+    .steps > li:last-child { border-bottom: none; }
+    .steps > li::before {
+      content: counter(step-counter);
+      position: absolute; left: 0; top: 14px;
+      width: 30px; height: 30px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 50%;
+      text-align: center; line-height: 30px;
+      font-size: 0.8rem; font-weight: 700;
+    }
+    .steps > li strong { display: block; margin-bottom: 6px; font-size: 1rem; }
+
+    /* ── Outputs box ─────────────────────────────────────────────────────── */
+    .outputs {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 14px 0;
+    }
+    .outputs .out-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-green);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .outputs ul { padding-left: 18px; }
+    .outputs li { margin: 6px 0; font-size: 0.88rem; }
+    .outputs li code { color: var(--accent-green); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrapper">
+    <h1>Cellpose-SAM Pipeline Guide</h1>
+    <p>How to run the segmentation pipeline on a new image stack, and how to fine-tune
+       Cellpose-SAM on your own annotated data.</p>
+    <span class="badge">Cellpose 4.1.1</span>
+    <span class="badge green">conda: cellpose</span>
+    <span class="badge orange">macOS / Windows / Linux</span>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <!-- ── TOC ───────────────────────────────────────────────────────────── -->
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li>
+        <a href="#setup">Environment setup</a>
+        <ol>
+          <li><a href="#setup-model">Getting the fine-tuned model</a></li>
+          <li><a href="#setup-images">Adding your images</a></li>
+        </ol>
+      </li>
+      <li>
+        <a href="#pipeline">Running the segmentation pipeline</a>
+        <ol>
+          <li><a href="#pipeline-notebook">Notebook (interactive)</a></li>
+          <li><a href="#pipeline-script">Script (batch)</a></li>
+          <li><a href="#pipeline-params">Key parameters</a></li>
+          <li><a href="#pipeline-outputs">Outputs</a></li>
+        </ol>
+      </li>
+      <li>
+        <a href="#training">Training your own model</a>
+        <ol>
+          <li><a href="#training-overview">What fine-tuning does</a></li>
+          <li><a href="#training-annotate">Step 1 — Annotate patches</a></li>
+          <li><a href="#training-finetune">Step 2 — Fine-tune (notebook)</a></li>
+          <li><a href="#training-script">Step 2b — Fine-tune (script / Sockeye)</a></li>
+          <li><a href="#training-evaluate">Step 3 — Evaluate</a></li>
+          <li><a href="#training-params">Hyperparameters</a></li>
+        </ol>
+      </li>
+      <li><a href="#csv">Understanding the CSV output</a></li>
+      <li><a href="#tips">Tips and common issues</a></li>
+    </ol>
+  </nav>
+
+
+  <!-- ── 1. Overview ────────────────────────────────────────────────────── -->
+  <section id="overview">
+    <h2>1 &nbsp;Overview</h2>
+
+    <p>This pipeline segments individual bacterial cells in Zeiss Airyscan confocal images
+       of mouse colon tissue sections, then measures per-cell fluorescence intensity in four channels
+       (BFP, GFP, RFP, SYTOX) to quantify osmotic and oxidative stress reporter activity.</p>
+
+    <h3>Image format</h3>
+    <table>
+      <tr><th>Property</th><th>Value</th></tr>
+      <tr><td>File format</td><td>TIFF, <code>(4, 6323, 6344)</code> uint16 stacks exported from Zen</td></tr>
+      <tr><td>Pixel size</td><td>0.035 µm/px (square, confirmed from Zen)</td></tr>
+      <tr><td>Channel 0 (C1)</td><td>BFP — constitutive reporter → <strong>segmentation input</strong></td></tr>
+      <tr><td>Channel 1 (C2)</td><td>GFP — osmotic-stress promoter</td></tr>
+      <tr><td>Channel 2 (C3)</td><td>RFP — oxidative-stress promoter</td></tr>
+      <tr><td>Channel 3 (C4)</td><td>SYTOX far-red — host nuclear stain (exclusion only)</td></tr>
+    </table>
+
+    <h3>Full pipeline at a glance</h3>
+    <div class="pipeline">
+      <div class="pipe-step"><div class="step-label">raw</div><div class="step-name">uint16 TIFF</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="step-label">preprocess</div><div class="step-name">Normalise BFP</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="step-label">segment</div><div class="step-name">Cellpose-SAM</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="step-label">filter</div><div class="step-name">Size filter</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="step-label">measure</div><div class="step-name">Raw uint16 stack</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step"><div class="step-label">output</div><div class="step-name">CSV + masks</div></div>
+    </div>
+
+    <div class="callout danger">
+      <div class="callout-title">Critical invariant</div>
+      Segmentation uses the <em>normalised</em> BFP image. Intensity measurement always uses
+      the <em>raw uint16 stack</em>. These two paths must never be swapped — measuring from
+      normalised images would destroy all quantitative information.
+    </div>
+  </section>
+
+
+  <!-- ── 2. Setup ───────────────────────────────────────────────────────── -->
+  <section id="setup">
+    <h2>2 &nbsp;Environment setup</h2>
+
+    <p>There are two separate conda environments. Keep them separate — they conflict.</p>
+
+    <h3>cellpose (main environment)</h3>
+    <p>Used for everything except the Omnipose baseline: fine-tuning, inference, measurement.</p>
+    <pre><code><span class="comment"># Create from scratch</span>
+conda env create -f environment.yml
+conda activate cellpose
+pip install -e .
+
+<span class="comment"># Or just activate if already set up</span>
+conda activate cellpose</code></pre>
+
+    <p><strong>Verify GPU is available:</strong></p>
+    <pre><code>python -c "import torch; print(torch.backends.mps.is_available())"  <span class="comment"># macOS</span>
+python -c "import torch; print(torch.cuda.is_available())"           <span class="comment"># Windows/Linux</span></code></pre>
+
+    <h3>omnipose (baseline comparison only)</h3>
+    <p>CPU-only. Used only to run the Omnipose baseline in <code>scripts/run_omnipose_baseline.py</code>.</p>
+    <pre><code>conda activate omnipose</code></pre>
+
+    <h3 id="setup-model">Getting the fine-tuned model</h3>
+    <p>Fine-tuned weights are too large for GitHub, so <code>models/</code> is gitignored in this repo.
+       They're hosted separately on the Hugging Face Hub:
+       <a href="https://huggingface.co/aliceh0ng/cellpose-biosensor">huggingface.co/aliceh0ng/cellpose-biosensor</a>.</p>
+    <p>After cloning, pull the model before running the pipeline:</p>
+    <pre><code>conda activate cellpose
+<span class="comment"># recommended run: 4stacks_5x5_norm</span>
+python scripts/download_model.py
+
+<span class="comment"># or a specific run</span>
+python scripts/download_model.py --run 5stacks</code></pre>
+    <div class="callout tip">
+      <div class="callout-title">What this does</div>
+      Downloads <code>models/finetuned/&lt;run&gt;/</code> from the Hub and updates
+      <code>models/finetuned/latest_model_path.txt</code>, which the pipeline reads automatically.
+      Skip this step to run with the base <code>cpsam</code> model instead.
+    </div>
+
+    <h3 id="setup-images">Adding your images</h3>
+    <p><code>data/raw/16bit_all/</code> doesn't exist yet after a fresh clone (raw images aren't
+       checked into git) — create it and copy your stacks in:</p>
+    <pre><code>mkdir -p data/raw/16bit_all
+cp /path/to/your/*.tif data/raw/16bit_all/</code></pre>
+
+    <p><strong>Required file format:</strong></p>
+    <table>
+      <tr><th>Property</th><th>Requirement</th></tr>
+      <tr>
+        <td>File type</td>
+        <td>TIFF, 16-bit unsigned integer (<code>uint16</code>) — use the 16-bit export from Zen,
+            <strong>not</strong> the RGB preview/quick-look export</td>
+      </tr>
+      <tr>
+        <td>Shape</td>
+        <td><code>(4, H, W)</code> — one z-plane, 4 channels first. <code>(Z, 4, H, W)</code> is
+            also accepted (max-projected automatically)</td>
+      </tr>
+      <tr>
+        <td>Channel order</td>
+        <td><code>[0]</code> BFP (constitutive → segmentation input) ·
+            <code>[1]</code> GFP (osmotic-stress reporter) ·
+            <code>[2]</code> RFP (oxidative-stress reporter) ·
+            <code>[3]</code> SYTOX (host nuclear stain, exclusion only)</td>
+      </tr>
+      <tr>
+        <td>Pixel size</td>
+        <td>0.035 µm/px — if yours differs, update <code>DIAMETER_PX</code>
+            (<code>round(1.5 / pixel_size)</code>)</td>
+      </tr>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-title">Format is validated, not assumed</div>
+      <code>load_stack()</code> in <code>src/io.py</code> checks dtype and shape on load and raises
+      a clear error if you accidentally pass the RGB export instead of the 16-bit one.
+    </div>
+
+    <p>Treat <code>data/raw/</code> as read-only once populated — nothing in the pipeline writes there.</p>
+  </section>
+
+
+  <!-- ── 3. Pipeline ────────────────────────────────────────────────────── -->
+  <section id="pipeline">
+    <h2>3 &nbsp;Running the segmentation pipeline</h2>
+
+    <p>There are two ways to run the pipeline: the interactive Jupyter notebook
+       (good for a single image, QC, and exploration) and the batch Python script
+       (good for processing all images at once, or on a cluster).</p>
+
+    <!-- 3a. Notebook -->
+    <h3 id="pipeline-notebook">3a &nbsp;Notebook — <code>notebooks/06_segmentation_pipeline.ipynb</code></h3>
+
+    <ol class="steps">
+      <li>
+        <strong>Activate the environment and open the notebook</strong>
+        <pre><code>conda activate cellpose
+jupyter lab  <span class="comment"># or: jupyter notebook</span></code></pre>
+        Open <code>notebooks/06_segmentation_pipeline.ipynb</code>.
+      </li>
+
+      <li>
+        <strong>Set the image path and model</strong>
+        <p>In the configuration cell, edit <code>STACK_PATH</code> to point to your image:</p>
+        <pre><code>STACK_PATH = PROJECT_ROOT / <span class="str">'data/raw/16bit_all/YOUR_IMAGE.tif'</span>
+
+<span class="comment"># Model is loaded automatically from latest_model_path.txt</span>
+<span class="comment"># Set MODEL_PATH = None to use the base cpsam without fine-tuning</span>
+MODEL_PATH = <span class="kw">None</span>  <span class="comment"># or leave as-is to use the recorded fine-tuned model</span></code></pre>
+        You can also adjust the size filter thresholds:
+        <pre><code>MIN_AREA = <span class="num">100</span>   <span class="comment"># px² — remove objects smaller than this (noise)</span>
+MAX_AREA = <span class="num">2000</span>  <span class="comment"># px² — remove objects larger than this (debris / host cells)</span></code></pre>
+      </li>
+
+      <li>
+        <strong>Run all cells (Kernel → Restart and Run All)</strong>
+        <p>The notebook will:</p>
+        <ul>
+          <li>Load the image stack and model</li>
+          <li>Normalise the BFP channel (p1–p99 percentile stretch)</li>
+          <li>Run Cellpose-SAM on the full image at <code>diameter=43 px</code></li>
+          <li>Apply size filter (100–2000 px²)</li>
+          <li>Save raw and filtered masks as TIFFs</li>
+          <li>Measure per-cell intensities from the raw uint16 stack</li>
+          <li>Save results as CSV</li>
+          <li>Show QC figures (mask overview, intensity histograms)</li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="callout tip">
+      <div class="callout-title">Tip — check the mask overview</div>
+      The notebook shows a 1:8 thumbnail of the BFP channel with red cell outlines overlaid.
+      Zoom into regions with dense bacteria to verify boundary quality before moving to analysis.
+    </div>
+
+    <!-- 3b. Script -->
+    <h3 id="pipeline-script">3b &nbsp;Script — <code>scripts/pipeline.py</code></h3>
+
+    <p>The script is functionally identical to the notebook but runs non-interactively.
+       It skips images whose CSV already exists — delete the CSV to reprocess.</p>
+
+    <pre><code>conda activate cellpose
+
+<span class="comment"># Test on a single image first</span>
+python scripts/pipeline.py --single 20260416-C3M2_Tcol_1.tif
+
+<span class="comment"># Run all .tif files in data/raw/16bit_all/</span>
+python scripts/pipeline.py</code></pre>
+
+    <p>On a SLURM cluster (Sockeye):</p>
+    <pre><code>sbatch jobs/pipeline.sh --split all</code></pre>
+
+    <!-- 3c. Params -->
+    <h3 id="pipeline-params">3c &nbsp;Key parameters</h3>
+
+    <table>
+      <tr><th>Parameter</th><th>Default</th><th>What it controls</th></tr>
+      <tr>
+        <td><code>DIAMETER_PX</code></td>
+        <td><code>43</code></td>
+        <td>Expected cell diameter in pixels. Set as <code>round(1.5 / 0.035)</code>
+            (1.5 µm bacteria at 0.035 µm/px). Change if your pixel size differs.</td>
+      </tr>
+      <tr>
+        <td><code>MIN_AREA</code></td>
+        <td><code>100</code></td>
+        <td>Minimum cell area in px². Objects below this are considered noise and removed.</td>
+      </tr>
+      <tr>
+        <td><code>MAX_AREA</code></td>
+        <td><code>2000</code></td>
+        <td>Maximum cell area in px². Objects above this are considered debris or host cell
+            fragments and removed.</td>
+      </tr>
+      <tr>
+        <td><code>LOCAL_BG</code></td>
+        <td><code>False</code></td>
+        <td>If <code>True</code>, subtracts a per-cell annular ring background (5 px wide)
+            before computing ratios. Recommended for heterogeneous backgrounds.</td>
+      </tr>
+      <tr>
+        <td><code>FLOW_THRESH</code></td>
+        <td><code>0.4</code></td>
+        <td>Cellpose flow error threshold. Lower = stricter (fewer, cleaner cells).
+            Raise if cells are being missed in dense regions.</td>
+      </tr>
+      <tr>
+        <td><code>CELLPROB_THRESH</code></td>
+        <td><code>0.0</code></td>
+        <td>Cell probability threshold. Raise to require higher confidence before
+            calling an object a cell.</td>
+      </tr>
+      <tr>
+        <td><code>MODEL_PATH</code></td>
+        <td>auto</td>
+        <td>Path to fine-tuned model weights. Auto-loaded from
+            <code>models/finetuned/latest_model_path.txt</code>.
+            Set to <code>None</code> to use base cpsam.</td>
+      </tr>
+    </table>
+
+    <!-- 3d. Outputs -->
+    <h3 id="pipeline-outputs">3d &nbsp;Outputs</h3>
+
+    <div class="outputs">
+      <div class="out-title">Files written per image</div>
+      <ul>
+        <li><code>data/processed/&lt;name&gt;_masks_raw.tif</code> — integer label mask before size filter</li>
+        <li><code>data/processed/&lt;name&gt;_masks.tif</code> — final label mask after all filters</li>
+        <li><code>data/results/&lt;name&gt;.csv</code> — per-cell intensity measurements</li>
+        <li><code>figures/qc/&lt;name&gt;_masks_overview.png</code> — BFP thumbnail + red cell outlines</li>
+        <li><code>figures/qc/&lt;name&gt;_intensity_qc.svg</code> — BFP, GFP/BFP, RFP/BFP histograms</li>
+      </ul>
+    </div>
+
+    <p>The script additionally writes <code>data/results/filter_steps.csv</code>
+       (one row per image: raw cell count and count after size filter).</p>
+  </section>
+
+
+  <!-- ── 4. Training ────────────────────────────────────────────────────── -->
+  <section id="training">
+    <h2>4 &nbsp;Training your own model</h2>
+
+    <!-- 4a. What it does -->
+    <h3 id="training-overview">4a &nbsp;What fine-tuning does</h3>
+
+    <p>Fine-tuning adapts the Cellpose-SAM (cpsam) foundation model to your specific
+       images using a small number of hand-annotated examples. In practice, 5–9 annotated
+       patches (~500×500 px tiles) is sufficient to meaningfully improve over the base model.</p>
+
+    <p>The fine-tuned model is saved to <code>models/finetuned/</code> and automatically
+       picked up by the pipeline (via <code>latest_model_path.txt</code>).</p>
+
+    <div class="callout">
+      <div class="callout-title">When to fine-tune</div>
+      Run the base cpsam on your images first (notebook 02 or pipeline with <code>MODEL_PATH=None</code>).
+      If the segmentation looks reasonable, fine-tuning will likely improve boundary accuracy
+      and reduce false positives. Fine-tuning is especially helpful for unusual cell shapes
+      or dense packing that differs from cpsam's training data.
+    </div>
+
+    <!-- 4b. Annotate -->
+    <h3 id="training-annotate">Step 1 — Export and annotate patches</h3>
+
+    <ol class="steps">
+      <li>
+        <strong>Export patches from the training image(s)</strong>
+        <p>Run <code>notebooks/01_tiling_preprocessing.ipynb</code> on your training image.
+           This splits the image into a 3×3 grid and saves BFP patches to
+           <code>data/annotations/images/</code>.</p>
+        <pre><code>conda activate cellpose
+jupyter nbconvert --to notebook --execute notebooks/01_tiling_preprocessing.ipynb</code></pre>
+        <p>Outputs: <code>patch_r0_c0.tif</code> through <code>patch_r2_c2.tif</code> (9 patches)</p>
+      </li>
+
+      <li>
+        <strong>Open Cellpose GUI</strong>
+        <pre><code>conda activate cellpose
+python -m cellpose</code></pre>
+      </li>
+
+      <li>
+        <strong>Annotate each patch</strong>
+        <ul>
+          <li>Open a patch from <code>data/annotations/images/</code></li>
+          <li>Set <strong>Calibrate diameter</strong> to ~43 px</li>
+          <li>Run <strong>cpsam</strong> as a starting point</li>
+          <li>Correct the masks:
+            <ul>
+              <li>Add missed cells (right-click drag to draw outline)</li>
+              <li>Delete false positives (select + Delete key)</li>
+              <li>Fix boundaries where needed</li>
+            </ul>
+          </li>
+          <li>Click <strong>Save</strong> — this writes <code>patch_r?_c?_seg.npy</code> next to the image</li>
+          <li>Repeat for all 9 patches (minimum 5 before first training run)</li>
+        </ul>
+        <div class="callout warn">
+          <div class="callout-title">Annotation quality matters more than quantity</div>
+          A few carefully corrected patches outperform many hastily annotated ones.
+          Focus effort on regions where the base model performs worst.
+        </div>
+      </li>
+    </ol>
+
+    <!-- 4c. Fine-tune (notebook) -->
+    <h3 id="training-finetune">Step 2 — Fine-tune: notebook <code>04_finetuning.ipynb</code></h3>
+
+    <p>The notebook is the recommended path for local training on a single image.</p>
+
+    <ol class="steps">
+      <li>
+        <strong>Open and configure</strong>
+        <p>Open <code>notebooks/04_finetuning.ipynb</code>.
+           The default configuration works for most cases:</p>
+        <pre><code>ANNOT_IMG_DIR = PROJECT_ROOT / <span class="str">'data/annotations/images'</span>
+N_EPOCHS      = <span class="num">100</span>
+LEARNING_RATE = <span class="num">1e-5</span>
+WEIGHT_DECAY  = <span class="num">0.1</span>
+BATCH_SIZE    = <span class="num">1</span>
+VAL_FRAC      = <span class="num">0.2</span>    <span class="comment"># 20% of patches held out for validation</span>
+MODEL_NAME    = <span class="str">'cpsam_finetuned'</span></code></pre>
+      </li>
+
+      <li>
+        <strong>Annotation QC cell</strong>
+        <p>The notebook shows all annotated patches with red outlines. Inspect these
+           before training — if a patch looks wrong, re-annotate it in the GUI before continuing.</p>
+      </li>
+
+      <li>
+        <strong>Run all cells</strong>
+        <p>Training runs locally using MPS (macOS) or CUDA (Windows/Linux).
+           100 epochs takes ~5–15 minutes depending on hardware.
+           Progress is shown per epoch.</p>
+        <p>When done, the notebook:</p>
+        <ul>
+          <li>Saves weights to <code>models/finetuned/models/cpsam_finetuned</code></li>
+          <li>Records the path in <code>models/finetuned/latest_model_path.txt</code></li>
+          <li>Plots training/validation loss curves</li>
+          <li>Compares base cpsam vs fine-tuned on held-out patches (AP@IoU 0.5)</li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="callout tip">
+      <div class="callout-title">Interpreting training curves</div>
+      Training loss should decrease steadily. Validation loss should follow (possibly with
+      some noise due to the small val set). If val loss starts rising while train loss keeps
+      falling, you are overfitting — reduce <code>N_EPOCHS</code> or annotate more patches.
+    </div>
+
+    <!-- 4d. Fine-tune (script) -->
+    <h3 id="training-script">Step 2b — Fine-tune: script <code>scripts/finetune.py</code></h3>
+
+    <p>Use this when training on multiple annotated stacks (e.g. on Sockeye or after annotating
+       patches from several images).</p>
+
+    <p>Prerequisites: <code>data/splits.json</code> (from <code>make_splits.py</code>) and
+       <code>data/annotations.json</code> listing which stacks are annotated.</p>
+
+    <p>Example <code>data/annotations.json</code>:</p>
+    <pre><code>{
+  <span class="str">"annotated_train"</span>: [
+    <span class="str">"20260416-C3M2_Tcol_1.tif"</span>,
+    <span class="str">"20260416-C3M3_Pcol_2.tif"</span>,
+    <span class="str">"20260416-C4M3_Dcol_1.tif"</span>
+  ]
+}</code></pre>
+
+    <pre><code><span class="comment"># Give the run a descriptive name</span>
+python scripts/finetune.py --run-name 5stacks
+
+<span class="comment"># With custom patches directory</span>
+python scripts/finetune.py --run-name 5stacks_v2 --patches-dir data/patches/v2
+
+<span class="comment"># On Sockeye (SLURM)</span>
+sbatch jobs/finetune.sh 5stacks</code></pre>
+
+    <div class="outputs">
+      <div class="out-title">Run outputs</div>
+      <ul>
+        <li><code>models/finetuned/&lt;run-name&gt;/models/cpsam_&lt;run-name&gt;</code> — weights</li>
+        <li><code>models/finetuned/&lt;run-name&gt;/run_info.json</code> — date, stacks, AP scores</li>
+        <li><code>models/finetuned/&lt;run-name&gt;/figures/training_curves.png</code></li>
+        <li><code>models/finetuned/&lt;run-name&gt;/figures/val_comparison.png</code></li>
+        <li><code>models/finetuned/&lt;run-name&gt;/figures/ap_bars.png</code></li>
+        <li><code>models/finetuned/latest_model_path.txt</code> — updated to this run</li>
+      </ul>
+    </div>
+
+    <!-- 4e. Evaluate -->
+    <h3 id="training-evaluate">Step 3 — Evaluate</h3>
+
+    <p>Check <code>run_info.json</code> for the key metric:</p>
+    <pre><code>{
+  <span class="str">"ap_base"</span>:      <span class="num">0.512</span>,   <span class="comment">// base cpsam AP @ IoU 0.5</span>
+  <span class="str">"ap_finetuned"</span>: <span class="num">0.681</span>,   <span class="comment">// fine-tuned AP @ IoU 0.5</span>
+  ...
+}</code></pre>
+
+    <p><strong>AP @ IoU 0.5 > base cpsam</strong> → proceed to the full pipeline.</p>
+    <p><strong>AP ≤ base cpsam</strong> — things to try:</p>
+    <ul>
+      <li>Annotate more patches, especially in regions where the base model performs worst</li>
+      <li>Increase <code>N_EPOCHS</code> to 200 if val loss was still decreasing at epoch 100</li>
+      <li>Check annotation quality — accidental mis-labels hurt more than fewer clean labels</li>
+    </ul>
+
+    <!-- 4f. Hyperparams -->
+    <h3 id="training-params">Hyperparameters</h3>
+
+    <table>
+      <tr><th>Parameter</th><th>Default</th><th>Notes</th></tr>
+      <tr>
+        <td><code>LEARNING_RATE</code></td>
+        <td><code>1e-5</code></td>
+        <td>Conservative — avoids overwriting SAM backbone features. From the official
+            Cellpose-SAM colab. Do not increase above 1e-4.</td>
+      </tr>
+      <tr>
+        <td><code>WEIGHT_DECAY</code></td>
+        <td><code>0.1</code></td>
+        <td>L2 regularisation. Use as-is.</td>
+      </tr>
+      <tr>
+        <td><code>BATCH_SIZE</code></td>
+        <td><code>1</code></td>
+        <td>SAM is memory-heavy. 1 is standard for fine-tuning.</td>
+      </tr>
+      <tr>
+        <td><code>N_EPOCHS</code></td>
+        <td><code>100</code></td>
+        <td>Increase to 200 if val loss is still falling at epoch 100.</td>
+      </tr>
+      <tr>
+        <td><code>VAL_FRAC</code></td>
+        <td><code>0.2</code></td>
+        <td>Fraction of patches (notebook) or stacks (script) held out for validation.</td>
+      </tr>
+    </table>
+
+    <div class="callout">
+      <div class="callout-title">Cellpose 4.x API note</div>
+      Use <code>train.train_seg(model.net, ...)</code>, NOT <code>model.train(...)</code>.
+      The latter is a Cellpose 2.x wrapper and is not the recommended path for cpsam fine-tuning.
+      <code>train_seg</code> returns a 3-tuple: <code>(model_path, train_losses, val_losses)</code>.
+    </div>
+  </section>
+
+
+  <!-- ── 5. CSV ──────────────────────────────────────────────────────────── -->
+  <section id="csv">
+    <h2>5 &nbsp;Understanding the CSV output</h2>
+
+    <p>Each image produces a CSV at <code>data/results/&lt;name&gt;.csv</code>
+       with one row per segmented cell.</p>
+
+    <table>
+      <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>image_id</code></td><td>str</td><td>Stack filename stem (e.g. <code>20260416-C3M2_Tcol_1</code>)</td></tr>
+      <tr><td><code>cell_id</code></td><td>int</td><td>Integer label from the mask (1-indexed)</td></tr>
+      <tr><td><code>area_px</code></td><td>int</td><td>Cell area in pixels</td></tr>
+      <tr><td><code>centroid_y</code>, <code>centroid_x</code></td><td>float</td><td>Cell centroid coordinates (pixels)</td></tr>
+      <tr><td><code>bfp_raw</code>, <code>gfp_raw</code>, <code>rfp_raw</code>, <code>sytox_raw</code></td><td>float</td>
+          <td>Mean pixel intensity per channel from raw uint16 data (ADU)</td></tr>
+      <tr><td><code>bfp_bg</code>, <code>gfp_bg</code>, <code>rfp_bg</code></td><td>float</td>
+          <td>Local background estimate (mean of 5 px annular ring). Zero if <code>LOCAL_BG=False</code>.</td></tr>
+      <tr><td><code>bfp</code>, <code>gfp</code>, <code>rfp</code></td><td>float</td>
+          <td>Background-subtracted intensity (<code>raw - bg</code>, floored at 0)</td></tr>
+      <tr><td><code>gfp_over_bfp</code></td><td>float</td>
+          <td>GFP/BFP ratio. Osmotic stress reporter. <code>NaN</code> if BFP = 0.</td></tr>
+      <tr><td><code>rfp_over_bfp</code></td><td>float</td>
+          <td>RFP/BFP ratio. Oxidative stress reporter. <code>NaN</code> if BFP = 0.</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-title">Autofluorescence warning</div>
+      GFP and RFP channels show substantial signal even when reporters should be OFF —
+      this is fecal autofluorescence, not biological signal. Always background-subtract
+      before computing or interpreting ratios. The BFP distribution should be unimodal
+      (good QC indicator); a long high tail may indicate residual autofluorescence.
+    </div>
+  </section>
+
+
+  <!-- ── 6. Tips ────────────────────────────────────────────────────────── -->
+  <section id="tips">
+    <h2>6 &nbsp;Tips and common issues</h2>
+
+    <h3>Pipeline</h3>
+    <ul>
+      <li><strong>Segmentation is slow on CPU</strong> — ensure MPS (macOS) or CUDA (Windows/Linux)
+          is active. Check with <code>torch.backends.mps.is_available()</code> or
+          <code>torch.cuda.is_available()</code>.</li>
+      <li><strong>"Skip — CSV exists"</strong> — the script skips images with existing CSVs.
+          Delete <code>data/results/&lt;name&gt;.csv</code> to reprocess.</li>
+      <li><strong>Too many cells / too few cells</strong> — adjust <code>CELLPROB_THRESH</code>
+          (up = stricter, fewer cells) or <code>FLOW_THRESH</code>.</li>
+      <li><strong>Size filter removing real cells</strong> — check the area distribution in the CSV
+          (<code>df['area_px'].describe()</code>) and widen <code>MIN_AREA</code>/<code>MAX_AREA</code>
+          accordingly.</li>
+    </ul>
+
+    <h3>Fine-tuning</h3>
+    <ul>
+      <li><strong>AP does not improve</strong> — the most common cause is annotation errors
+          (missed cells, wrongly split/merged cells). Re-examine the validation patches in the GUI.</li>
+      <li><strong>Training loss does not decrease</strong> — check that patches are float32 images
+          with at least some cell signal. Fully black patches will not train correctly.</li>
+      <li><strong>MPS autocast warnings during training</strong> — these are cosmetic and safe to ignore.
+          They occur because MPS does not support all dtypes used by the autocast context.</li>
+      <li><strong>Saving intermediate checkpoints</strong> — Cellpose saves a single final model.
+          If you want checkpoints at intervals, increase <code>N_EPOCHS</code> in stages
+          and run separate training runs.</li>
+    </ul>
+
+    <h3>File paths</h3>
+    <p>Every notebook and script defines <code>PROJECT_ROOT</code> as an absolute path.
+       All data, model, and figure paths are built from it. Never use relative paths like
+       <code>'data/...'</code> — they silently create folders inside <code>notebooks/</code>
+       when a notebook is run from that directory.</p>
+
+    <h3>Display vs. measurement normalisation</h3>
+    <table>
+      <tr><th>Use</th><th>Normalisation</th><th>Function</th></tr>
+      <tr>
+        <td>Cellpose-SAM input</td>
+        <td>p1–p99 percentile stretch → float32 [0, 1]</td>
+        <td><code>normalize_for_segmentation()</code></td>
+      </tr>
+      <tr>
+        <td>QC thumbnail display</td>
+        <td>p1–p99.9 (avoids autofluorescence blobs compressing range)</td>
+        <td><code>normalize_for_segmentation(high_pct=99.9)</code></td>
+      </tr>
+      <tr>
+        <td>Intensity measurement</td>
+        <td><strong>None — raw uint16 only</strong></td>
+        <td><code>extract_intensities(masks, raw_stack, ...)</code></td>
+      </tr>
+    </table>
+  </section>
+
+</div><!-- /wrapper -->
+
+</body>
+</html>

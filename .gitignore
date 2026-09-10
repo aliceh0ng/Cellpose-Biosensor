@@ -39,11 +39,12 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# pkgdown site
-docs/
-
 # translation temp files
 po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Fine-tuned model weights — too large for GitHub, pulled from Hugging Face
+# via scripts/download_model.py instead (huggingface.co/aliceh0ng/cellpose-biosensor)
+models/
