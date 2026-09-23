@@ -7,7 +7,7 @@ The pipeline segments single *E. coli* Nissle 1917 biosensor cells in confocal i
 
 Resources:
 - **Report prepared for BMEG591T:** [`files/FinalReport_withResults.pdf`](files/FinalReport_withResults.pdf)
-- **Fine-tuned model:** [huggingface.co/aliceh0ng/cellpose-biosensor](https://huggingface.co/aliceh0ng/cellpose-biosensor)
+- **Fine-tuned model:** [`huggingface.co/aliceh0ng/cellpose-biosensor`](https://huggingface.co/aliceh0ng/cellpose-biosensor)
 - **Detailed step-by-step guide:** [`docs/pipeline_guide.md`](docs/pipeline_guide.md)
 
 Presentation explaining how the fine-tuned model was trained (click to watch; slides in [`files/FinalSlides.pdf`](files/FinalSlides.pdf)):
@@ -202,22 +202,6 @@ Downstream GFP/BFP and RFP/BFP analyses by region, sex and treatment are in the
 
 ---
 
-## Repository structure
-
-```
-Cellpose-Biosensor/
-├── data/            # raw/, patches/, processed/, results/ (contents not tracked)
-├── docs/            # pipeline_guide.md: detailed how-to
-├── environments/    # conda environments (macOS / Windows)
-├── files/           # report, slides, README figures
-├── models/          # fine-tuned weights, pulled from Hugging Face (gitignored)
-├── notebooks/       # 00–06 exploration → pipeline, Analysis_Template.Rmd
-├── scripts/         # make_splits → inference_norm → finetune → pipeline
-└── src/             # io, preprocess, segment, measure
-```
-
----
-
 ## Citation
 
 If you use this pipeline or model, please cite Cellpose-SAM and Cellpose:
@@ -228,13 +212,3 @@ If you use this pipeline or model, please cite Cellpose-SAM and Cellpose:
   https://doi.org/10.1038/s41592-022-01663-4
 - Stringer, C., Wang, T., Michaelos, M. & Pachitariu, M. **Cellpose: a generalist algorithm for cellular segmentation.**
   *Nature Methods* 18, 100–106 (2021). https://doi.org/10.1038/s41592-020-01018-x
-
-```bibtex
-@article{pachitariu2025cellposesam,
-  title   = {Cellpose-SAM: superhuman generalization for cellular segmentation},
-  author  = {Pachitariu, Marius and Rariden, Michael and Stringer, Carsen},
-  journal = {bioRxiv},
-  year    = {2025},
-  doi     = {10.1101/2025.04.28.651001}
-}
-```
