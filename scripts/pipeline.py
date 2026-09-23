@@ -18,6 +18,9 @@ python scripts/pipeline.py
 
 # Test on one image first
 python scripts/pipeline.py --single FILENAME.tif
+
+# Run all files except specific ones (e.g. a known-bad/incomplete export)
+python scripts/pipeline.py --exclude BAD_FILE.tif OTHER_BAD_FILE.tif
 """
 
 import argparse
@@ -184,6 +187,8 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--single', metavar='FILENAME',
                         help='Process one file; omit to run all .tif files in RAW_DIR')
+    parser.add_argument('--exclude', metavar='FILENAME', nargs='+', default=[],
+                        help='Skip these filenames (e.g. a known-bad/incomplete export)')
     args = parser.parse_args()
 
     model = load_model()
@@ -201,12 +206,20 @@ def main():
             filter_stats.append(stats)
     else:
         paths = sorted(RAW_DIR.glob('*.tif'))
+        if args.exclude:
+            excluded = set(args.exclude)
+            paths = [p for p in paths if p.name not in excluded]
+            log.info(f'Excluding {sorted(excluded)}')
         if not paths:
             raise FileNotFoundError(f'No .tif files found in {RAW_DIR}')
         log.info(f'Processing {len(paths)} images in {RAW_DIR}')
         for i, path in enumerate(paths, 1):
             log.info(f'\n[{i}/{len(paths)}] {path.name}')
-            stats = process_stack(path, model)
+            try:
+                stats = process_stack(path, model)
+            except (ValueError, TypeError) as e:
+                log.error(f'  Skipping {path.name} — {e}')
+                continue
             if stats:
                 filter_stats.append(stats)
 

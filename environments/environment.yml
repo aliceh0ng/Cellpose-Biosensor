@@ -55,6 +55,7 @@ dependencies:
       - h11==0.16.0
       - httpcore==1.0.9
       - httpx==0.28.1
+      - huggingface_hub==1.11.0
       - idna==3.11
       - imagecodecs==2025.3.30
       - imageio==2.37.3

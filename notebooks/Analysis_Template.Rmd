@@ -1,0 +1,596 @@
+---
+title: "Analysis_Template"
+author: "Alice Hong"
+date: "2026-04-27"
+output: pdf_document
+---
+
+# Libraries
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(rstatix)
+library(ggpubr)
+```
+
+# Load Data
+- Replace file paths here with your directory path!
+```{r}
+# Load in metadata
+# Example:
+# meta <- read_excel('~/projects/cellpose-biosensor/data/P015-AH004.xlsx', sheet = 'Staining_Imaging')
+
+meta <- read_excel('*REPLACE THIS*', sheet = 'Staining_Imaging')
+
+# Load in counts
+# Running the pipeline will have created a 'filter_steps.csv'
+log <- read.csv('*REPLACE THIS WITH DIR PATH*/data/results/filter_steps.csv') %>%
+  separate(stem, into = c("Imaged_On", "Exp", "Region", "replicate"), sep = "[-_]")
+
+# Load all csv's and combine into 1 df
+results_dir <- '*REPLACE THIS WITH DIR PATH*/data/results'
+csv_files <- list.files(results_dir, pattern = '\\.csv$', full.names = TRUE)
+csv_files <- csv_files[!grepl('filter_steps', csv_files)]
+csv_files <- csv_files[sapply(csv_files, function(f) length(readLines(f)) > 1)]
+```
+
+# Run the chunk below once, then comment out. It will create a large .csv file with all data
+```{r}
+# Big df with all data + meta data!
+# cells <- lapply(csv_files, read.csv) %>% bind_rows() %>%
+#   separate(image_id, into = c("Imaged_On", "Exp", "Region", "replicate"), sep = "[-_]", remove = FALSE) %>%
+#   left_join(meta %>% select(`Exp #`, Sex, `Experimental Group`), by = c("Exp" = "Exp #"))
+```
+
+# Uncomment below to filter out low count images...
+# For example, in mAH004, removed C1M2 - dim BFP flagged during imaging
+# Replace the file back for the location 
+```{r}
+# # Uncomment below to filter out low count images too..,
+# keep_images <- log %>%
+#   filter(n_size_filter >= 100) %>%
+#   mutate(image_id = paste0(Imaged_On, "-", Exp, "_", Region, "_", replicate)) %>%
+#   pull(image_id)
+# 
+# cells <- cells %>% filter(image_id %in% keep_images, Exp != "C1M2")
+
+# cells <- cells %>%filter(Exp != "C1M2")
+# 
+# cat("No. NA values in cells df:", sum(is.na(cells)), "\n")
+
+#write.csv(cells, file = "~/projects/cellpose-biosensor/data/results/cells.csv")
+
+cells <- read.csv("~*REPLACE WITH FILE PATH*/data/results/cells.csv", row.names = 1)
+```
+
+# Check distribution of cell counts per image
+```{r}
+# Plot distribution of counts
+log %>%
+  mutate(stem = paste(Imaged_On, Exp, Region, replicate, sep = "-")) %>%
+  ggplot(aes(x = reorder(stem, n_size_filter), y = n_size_filter)) +
+  geom_col(fill = "#486dad") +
+  coord_flip() +
+  labs(x = NULL, y = "Cell count (after size filter)", title = "Cells per image") +
+  theme_bw()
+```
+# Check distribution of BFP per image
+```{r}
+# cells %>%
+#   ggplot(aes(x = reorder(image, bfp, FUN = median), y = bfp)) +
+#   geom_boxplot(outlier.shape = NA) +
+#   coord_flip() +
+#   scale_y_continuous(trans = "log1p") +
+#   theme_bw() +
+#   labs(title = "BFP intensity per image", x = "Image (ordered by median BFP)", y = "BFP") +
+#   theme(panel.grid = element_blank())
+```
+
+
+# Check which mice/regions the data comes from
+```{r}
+cells <- cells %>%
+  mutate(image = paste(Imaged_On, Exp, Region, replicate, sep = "_"))
+
+cell_summary <- cells %>%
+  group_by(`Experimental.Group`, Sex, Region) %>%
+  summarise(
+    n_cells = n(),
+    n_images = n_distinct(image),
+    n_mice = n_distinct(Exp),
+    .groups = "drop"
+  )
+
+cell_summary
+
+image_summary <- cells %>%
+  group_by(image, `Experimental.Group`, Sex, Region, Exp) %>%
+  summarise(
+    n_cells = n(),
+
+    # RFP/BFP
+    mean_rfp_bfp   = mean(rfp_over_bfp, na.rm = TRUE),
+    median_rfp_bfp = median(rfp_over_bfp, na.rm = TRUE),
+    sd_rfp_bfp     = sd(rfp_over_bfp, na.rm = TRUE),
+    iqr_rfp_bfp    = IQR(rfp_over_bfp, na.rm = TRUE),
+    q25_rfp_bfp    = quantile(rfp_over_bfp, 0.25, na.rm = TRUE),
+    q75_rfp_bfp    = quantile(rfp_over_bfp, 0.75, na.rm = TRUE),
+
+    # GFP/BFP
+    mean_gfp_bfp   = mean(gfp_over_bfp, na.rm = TRUE),
+    median_gfp_bfp = median(gfp_over_bfp, na.rm = TRUE),
+    sd_gfp_bfp     = sd(gfp_over_bfp, na.rm = TRUE),
+    iqr_gfp_bfp    = IQR(gfp_over_bfp, na.rm = TRUE),
+    q25_gfp_bfp    = quantile(gfp_over_bfp, 0.25, na.rm = TRUE),
+    q75_gfp_bfp    = quantile(gfp_over_bfp, 0.75, na.rm = TRUE),
+
+    .groups = "drop"
+  )
+```
+
+# Add later to chunk above (more statsss)
+```{r}
+# prop_high_rfp = mean(rfp_over_bfp > 0.5, na.rm = TRUE),
+# prop_high_gfp = mean(gfp_over_bfp > 0.5, na.rm = TRUE),
+# cv_rfp_bfp = sd_rfp_bfp / mean_rfp_bfp,
+# cv_gfp_bfp = sd_gfp_bfp / mean_gfp_bfp,
+```
+
+# Quick GROUPED boxplot of rfp/bfp and gfp/bfg colroed by sex and facet by region, grouped by condition
+# Plotted based off raw data, not taking into account differences in N of cells per image
+```{r}
+cells %>%
+  ggplot(aes(x = `Experimental.Group`, y = rfp_over_bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA) +
+  facet_wrap(~Region) +
+  scale_y_continuous(transform="log1p", limits=c(0,0.75)) +
+  #scale_y_continuous(limits=c(0,1)) +
+  theme_bw() +
+  labs(x = NULL, y = "RFP / BFP") +
+  theme(panel.grid = element_blank())
+
+cells %>%
+  ggplot(aes(x = `Experimental.Group`, y = gfp_over_bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA) +
+  facet_wrap(~Region) +
+  scale_y_continuous(transform="log1p", limits=c(0,0.75)) +
+  #scale_y_continuous(limits=c(0,1)) +
+  theme_bw() +
+  labs(x = NULL, y = "GFP / BFP") +
+  theme(panel.grid = element_blank())
+```
+
+# median signal per image, grouped by condition
+```{r}
+p_rfp <- image_summary %>%
+  ggplot(aes(x = `Experimental.Group`, y = median_rfp_bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  #geom_jitter(aes(color = Sex), width = 0.15, size = 2, alpha = 0.5) +
+  geom_jitter(aes(color = Sex), 
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.75), 
+              size = 1.5,
+              alpha = 0.4) +
+  facet_wrap(~Region) +
+  #scale_y_continuous(trans = "log1p") +
+  labs(
+    title = "RFP/BFP",
+    x = NULL,
+    y = "Median RFP/BFP"
+  ) +
+  theme_bw() +
+  theme(panel.grid = element_blank())
+
+p_rfp
+
+p_gfp <- image_summary %>%
+  ggplot(aes(x = `Experimental.Group`, y = median_gfp_bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  #geom_jitter(aes(color = Sex), width = 0.15, size = 2, alpha = 0.8) +
+  geom_jitter(aes(color = Sex), 
+            position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.75), 
+            size = 1.5,
+            alpha = 0.4) +
+  facet_wrap(~Region) +
+  #scale_y_continuous(trans = "log1p") +
+  labs(
+    title = "GFP/BFP",
+    x = NULL,
+    y = "Median GFP / BFP"
+  ) +
+  theme_bw() +
+  theme(panel.grid = element_blank())
+
+p_gfp
+```
+
+
+# median signal per image, grouped by condition only
+```{r}
+p_rfp <- image_summary %>%
+  ggplot(aes(x = `Experimental.Group`, y = median_rfp_bfp, color = `Experimental.Group`)) +
+  geom_violin(alpha = 0.6) +
+  #geom_jitter(aes(color = Sex), width = 0.15, size = 2, alpha = 0.5) +
+  geom_jitter(
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.75), 
+              size = 1.5,
+              alpha = 0.4) +
+  #facet_wrap(~Region) +
+  #scale_y_continuous(trans = "log1p") +
+  labs(
+    title = "RFP/BFP",
+    x = NULL,
+    y = "Median RFP/BFP"
+  ) +
+  theme_bw() +
+  theme(panel.grid = element_blank(), legend.position = "none") 
+
+p_rfp
+
+
+p_gfp <- image_summary %>%
+  ggplot(aes(x = `Experimental.Group`, y = median_gfp_bfp, color = `Experimental.Group`)) +
+  geom_violin(alpha = 0.6) +
+  #geom_jitter(aes(color = Sex), width = 0.15, size = 2, alpha = 0.8) +
+  geom_jitter(
+            position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.75), 
+            size = 1.5,
+            alpha = 0.4) +
+  #facet_wrap(~Region) +
+  #scale_y_continuous(trans = "log1p") +
+  labs(
+    title = "GFP/BFP",
+    x = NULL,
+    y = "Median GFP / BFP"
+  ) +
+  theme_bw() +
+  theme(panel.grid = element_blank(), legend.position = "none")
+
+p_gfp
+```
+
+
+# BFP Threshold?
+
+## Overall BFP distribution
+```{r}
+cells %>%
+  ggplot(aes(x = bfp)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 100,
+    fill = "grey70",
+    #color = "black",
+    alpha = 0.8
+  ) +
+  geom_density(
+    color = "black",
+    linewidth = 1
+  ) +
+  theme_bw() +
+  labs(
+    title = "Distribution of BFP intensity across cells",
+    x = "BFP intensity",
+    y = "Density"
+  ) +
+  theme(panel.grid = element_blank())
+```
+## BFP distribution by experimental group
+```{r}
+cells %>%
+  ggplot(aes(x = bfp, fill = Experimental.Group)) +
+  geom_density(alpha = 0.4) +
+  #scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "BFP intensity distribution by group",
+    x = "BFP intensity",
+    y = "Density"
+  ) +
+  theme(panel.grid = element_blank())
+```
+## BFP by group/region/sex
+```{r}
+cells %>%
+  ggplot(aes(x = Experimental.Group, y = bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  facet_wrap(~ Region) +
+  theme_bw() +
+  labs(
+    title = "BFP intensity by group and region",
+    x = NULL,
+    y = "BFP intensity"
+  )
+
+## Cutting off some outliers
+cells %>%
+  ggplot(aes(x = Experimental.Group, y = bfp, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  facet_wrap(~ Region) +
+  theme_bw() +
+  scale_y_continuous(limits = c(0,5000)) +
+  labs(
+    title = "BFP intensity by group and region",
+    x = NULL,
+    y = "BFP intensity"
+  )
+
+bfp_summary <- cells %>%
+  group_by(Experimental.Group, Sex, Region) %>%
+  summarise(
+    n_cells = n(),
+    
+    mean_bfp   = mean(bfp, na.rm = TRUE),
+    median_bfp = median(bfp, na.rm = TRUE),
+    
+    sd_bfp  = sd(bfp, na.rm = TRUE),
+    iqr_bfp = IQR(bfp, na.rm = TRUE),
+    
+    q25_bfp = quantile(bfp, 0.25, na.rm = TRUE),
+    q75_bfp = quantile(bfp, 0.75, na.rm = TRUE),
+    
+    min_bfp = min(bfp, na.rm = TRUE),
+    max_bfp = max(bfp, na.rm = TRUE),
+    
+    .groups = "drop"
+  )
+
+bfp_summary
+```
+
+# Remove below 800 BFP cells??
+```{r}
+# cells_filt <- cells %>% filter(bfp > 1000)
+# 
+# image_summary_filt <- cells_filt %>%
+#   group_by(image, Experimental.Group, sex, region, exp) %>%
+#   summarise(
+#     n_cells = n(),
+#     
+#     median_rfp_bfp = median(rfp_over_bfp, na.rm = TRUE),
+#     mean_rfp_bfp   = mean(rfp_over_bfp, na.rm = TRUE),
+#     
+#     median_gfp_bfp = median(gfp_over_bfp, na.rm = TRUE),
+#     mean_gfp_bfp   = mean(gfp_over_bfp, na.rm = TRUE),
+#     
+#     .groups = "drop"
+#   )
+
+# p_rfp_filt <- image_summary_filt %>%
+#   ggplot(aes(x = Experimental.Group, y = median_rfp_bfp, fill = sex)) +
+#   geom_boxplot(
+#     position = position_dodge(width = 0.75),
+#     outlier.shape = NA,
+#     alpha = 0.6
+#   ) +
+#   geom_jitter(
+#     aes(color = sex),
+#     position = position_jitterdodge(
+#       jitter.width = 0.1,
+#       dodge.width = 0.75
+#     ),
+#     size = 2,
+#     alpha = 0.8
+#   ) +
+#   facet_wrap(~region) +
+#   theme_bw() +
+#   labs(
+#     title = "RFP/BFP per image (BFP > 800)",
+#     x = NULL,
+#     y = "Median RFP / BFP"
+#   )
+# 
+# p_rfp_filt
+# p_rfp
+```
+
+
+# STATS??? 
+
+Small-ish n (images)
+Non-normal (skewed, bounded near 0)
+Independent units = images
+Grouped by Region + Sex
+
+Wilcoxon rank-sum test (Mann–Whitney U)
+
+## between groups (within region), between sexes (within group + region)
+```{r}
+# stats_group <- image_summary %>%
+#   group_by(region) %>%
+#   wilcox_test(median_rfp_bfp ~ Experimental.Group) %>%
+#   adjust_pvalue(method = "BH") %>%
+#   add_significance()
+# 
+# stats_group
+# 
+# stats_sex <- image_summary %>%
+#   group_by(region, Experimental.Group) %>%
+#   filter(n_distinct(sex) == 2) %>%   # keep only groups with both M and F
+#   wilcox_test(median_rfp_bfp ~ sex) %>%
+#   adjust_pvalue(method = "BH")
+# 
+# stats_sex
+```
+
+## Within each group + sex, do regions differ at all?
+
+- Across regions (3), so need multi gorup test like ANOVA, but not parametric so kruskal wallis?
+
+```{r}
+# stats_region <- image_summary %>%
+#   group_by(Experimental.Group, sex) %>%
+#   kruskal_test(median_rfp_bfp ~ region)
+# 
+# stats_region
+# 
+# stats_region_pw <- image_summary %>%
+#   group_by(Experimental.Group, sex) %>%
+#   pairwise_wilcox_test(
+#     median_rfp_bfp ~ region,
+#     p.adjust.method = "BH"
+#   )
+# 
+# stats_region_pw
+```
+
+# A different kind of plot - PDFS?
+
+## RFP/BFP PDFs
+```{r}
+p_rfp_density_female <- cells %>%
+  filter(Sex == "female") %>%
+  ggplot(aes(x = rfp_over_bfp, color = Experimental.Group, fill = Experimental.Group)) +
+  geom_density(alpha = 0.25, linewidth = 0.8) +
+  facet_wrap(~Region) +
+  scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "RFP/BFP distribution across cells, female",
+    x = "RFP / BFP (log1p scale)",
+    y = "Density",
+    color = "Group",
+    fill = "Group"
+  ) +
+  theme(panel.grid=element_blank())
+
+p_rfp_density_female
+
+p_rfp_density_male <- cells %>%
+  filter(Sex == "male") %>%
+  ggplot(aes(x = rfp_over_bfp, color = Experimental.Group, fill = Experimental.Group)) +
+  geom_density(alpha = 0.25, linewidth = 0.8) +
+  facet_wrap(~Region) +
+  scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "RFP/BFP distribution across cells, male",
+    x = "RFP / BFP (log1p scale)",
+    y = "Density",
+    color = "Group",
+    fill = "Group"
+  ) +
+  theme(panel.grid=element_blank())
+
+p_rfp_density_male
+```
+```{r}
+cells %>%
+  #ggplot(aes(x = rfp_over_bfp, fill = Experimental.Group)) +
+  ggplot(aes(x = rfp_over_bfp, group = image_id, color = Experimental.Group, fill = Experimental.Group)) +
+  
+  geom_histogram(bins = 50, alpha = 0.5, position = "identity") +
+  facet_grid(Sex ~ Region) +
+  #scale_x_continuous(trans = "log1p") +
+  scale_x_continuous(limits=c(0,1)) +
+  theme_bw() +
+  labs(
+    title = "Cell-level RFP/BFP distributions",
+    x = "RFP / BFP (log1p scale)",
+    y = "Cell count"
+  ) + theme(panel.grid = element_blank())
+```
+# Now for GFP
+```{r}
+p_gfp_density_female <- cells %>%
+  filter(Sex == "female") %>%
+  ggplot(aes(x = gfp_over_bfp, color = Experimental.Group, fill = Experimental.Group)) +
+  geom_density(alpha = 0.25, linewidth = 0.8) +
+  facet_wrap(~Region) +
+  scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "GFP/BFP distribution across cells - Female",
+    x = "GFP / BFP (log1p scale)",
+    y = "Density",
+    color = "Group",
+    fill = "Group"
+  ) + theme(panel.grid=element_blank())
+
+p_gfp_density_female
+
+p_gfp_density_male <- cells %>%
+  filter(Sex == "male") %>%
+  ggplot(aes(x = gfp_over_bfp, color = Experimental.Group, fill = Experimental.Group)) +
+  geom_density(alpha = 0.25, linewidth = 0.8) +
+  facet_wrap(~Region) +
+  scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "GFP/BFP distribution across cells - Male",
+    x = "GFP / BFP (log1p scale)",
+    y = "Density",
+    color = "Group",
+    fill = "Group"
+  ) + theme(panel.grid=element_blank())
+
+p_gfp_density_male
+```
+
+
+```{r}
+cells %>%
+  ggplot(aes(x = gfp_over_bfp, fill = Experimental.Group)) +
+  geom_histogram(bins = 50, alpha = 0.5, position = "identity") +
+  facet_grid(Sex ~ Region) +
+  scale_x_continuous(trans = "log1p") +
+  theme_bw() +
+  labs(
+    title = "Cell-level GFP/BFP distributions",
+    x = "GFP / BFP (log1p scale)",
+    y = "Cell count"
+  ) +theme(panel.grid=element_blank())
+```
+
+# Clean up column and variable names
+
+```{r}
+# library(janitor)
+# 
+# cells <- cells %>% clean_names()
+# image_summary <- image_summary %>% clean_names()
+# 
+# cells <- cells %>%
+#   mutate(Experimental.Group = recode(Experimental.Group,
+#     "PEG + DSS" = "PEG_DSS",
+#     "Water + Water" = "Water"
+#   ))
+# 
+# image_summary <- image_summary %>%
+#   mutate(Experimental.Group = recode(Experimental.Group,
+#     "PEG + DSS" = "PEG_DSS",
+#     "Water + Water" = "Water"
+#   ))
+```
+
+
+# FC Calculations?
+
+```{r}
+# fc_summary <- image_summary %>%
+#   group_by(region, sex, experimental_group) %>%
+#   summarise(
+#     mean_rfp   = mean(median_rfp_bfp, na.rm = TRUE),
+#     median_rfp = median(median_rfp_bfp, na.rm = TRUE),
+#     mean_gfp   = mean(median_gfp_bfp, na.rm = TRUE),
+#     median_gfp = median(median_gfp_bfp, na.rm = TRUE),
+#     .groups = "drop"
+#   )
+# 
+# fc <- fc_summary %>%
+#   pivot_wider(
+#     names_from = experimental_group,
+#     values_from = c(mean_rfp, median_rfp, mean_gfp, median_gfp)
+#   ) %>%
+#   mutate(
+#     fc_mean_rfp   = mean_rfp_PEG_DSS / mean_rfp_Water,
+#     fc_median_rfp = median_rfp_PEG_DSS / median_rfp_Water,
+#     fc_mean_gfp   = mean_gfp_PEG_DSS / mean_gfp_Water,
+#     fc_median_gfp = median_gfp_PEG_DSS / median_gfp_Water
+#   )
+# 
+# fc %>%
+#   select(region, sex, fc_mean_rfp, fc_mean_gfp, fc_median_rfp, fc_median_gfp)
+```
+
