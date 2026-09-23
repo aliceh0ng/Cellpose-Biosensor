@@ -47,7 +47,7 @@ Used for fine-tuning, inference, and measurement.
 ```bash
 # Create from scratch
 conda env create -f environment.yml
-conda activate cellpose
+conda activate cellpose-biosensor
 pip install -e .
 
 # Verify GPU
