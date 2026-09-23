@@ -184,6 +184,22 @@ large autofluorescent debris that base `cpsam` picks up, for example the blob at
 
 ![Masks overview](files/example_masks_overview.png)
 
+**Per-cell fluorescence quantification** for the same image. Mean intensity in each channel is measured inside every
+mask from the raw uint16 stack. Reporter activity is then expressed as GFP/BFP and RFP/BFP. Median values for this
+image: BFP = 846 ADU, GFP/BFP = 0.021, RFP/BFP = 0.142.
+
+![Intensity quantification](files/example_intensity_qc.svg)
+
+First rows of `data/results/20260416-C3M2_Tcol_1.csv` (selected columns, rounded):
+
+| cell_id | area_px | bfp_raw | gfp_raw | rfp_raw | gfp_over_bfp | rfp_over_bfp |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 316 | 628 | 14 | 103 | 0.022 | 0.164 |
+| 2 | 947 | 419 | 2 | 5 | 0.004 | 0.011 |
+| 3 | 694 | 523 | 24 | 335 | 0.045 | 0.641 |
+| 4 | 549 | 915 | 4 | 47 | 0.005 | 0.052 |
+| 5 | 1160 | 769 | 43 | 119 | 0.057 | 0.155 |
+
 Downstream GFP/BFP and RFP/BFP analyses by region, sex and treatment are in the
 [final report](files/FinalReport_withResults.pdf).
 
