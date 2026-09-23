@@ -152,6 +152,10 @@ def _save_figures(stem, stack, masks_final, n0, n1, df):
     plt.close()
 
     # 3 — intensity QC histograms
+    if df.empty:
+        log.info(f'  Figures saved → figures/qc/{stem}_masks_overview.png (no cells — skipped intensity QC)')
+        return
+
     fig, axes = plt.subplots(1, 3, figsize=(15, 4), facecolor='white')
     axes[0].hist(df['bfp'], bins=60, color='#486dad', alpha=0.85)
     axes[0].set_title(f'BFP ({bg_label})', color='black')
