@@ -1,11 +1,12 @@
 # Cellpose-Biosensor
 
-Master repository for the biosensor quantification pipeline for in situ fluorescent bacterial images.
+Master repository for the biosensor quantification pipeline for fluorescent bacterial images imaged in situ in the murine colon.
 
-The pipeline segments single *E. coli* Nissle 1917 biosensor cells in confocal images of mouse colon sections using a fine-tuned
-[Cellpose-SAM](https://github.com/MouseLand/cellpose) model. It then measures per-cell reporter activity (GFP/BFP for osmotic stress, RFP/BFP for oxidative stress).
+The pipeline segments single *E. coli* Nissle 1917 biosensor cells in confocal images of mouse colon sections using the
+[Cellpose-SAM](https://github.com/MouseLand/cellpose) model fine-tuned with fluorescent bacterial images from mouse tissue.It then meausres single cell fluorescence intensity to quantify report activity.
 
-- **Final report (BMEG591T):** [`files/FinalReport_withResults.pdf`](files/FinalReport_withResults.pdf)
+Resources:
+- **Report prepared for BMEG591T:** [`files/FinalReport_withResults.pdf`](files/FinalReport_withResults.pdf)
 - **Fine-tuned model:** [huggingface.co/aliceh0ng/cellpose-biosensor](https://huggingface.co/aliceh0ng/cellpose-biosensor)
 - **Detailed step-by-step guide:** [`docs/pipeline_guide.md`](docs/pipeline_guide.md)
 
@@ -27,11 +28,11 @@ cd Cellpose-Biosensor
 ### 2. Set up the environment
 
 ```bash
-# macOS (Apple Silicon, MPS)
+# macOS
 conda env create -f environments/environment.yml
 conda activate cellpose-biosensor
 
-# Windows / Linux (NVIDIA, CUDA)
+# Windows/Linux (using NVIDIA CUDA GPU)
 conda env create -f environments/environment_windows.yml
 conda activate cellpose
 ```
@@ -44,7 +45,7 @@ python -c "import torch; print(torch.backends.mps.is_available(), torch.cuda.is_
 
 ### 3. Pull the fine-tuned model from Hugging Face
 
-The model weights are too large for GitHub, so `models/` is gitignored. They are hosted on the
+Model hosted on:
 [Hugging Face Hub](https://huggingface.co/aliceh0ng/cellpose-biosensor) instead:
 
 ```bash
@@ -57,7 +58,7 @@ pipeline falls back to the base `cpsam` model.
 
 ### 4. Add your images
 
-Raw images are not in git. Put your 16-bit stacks in `data/raw/16bit_all/`:
+Put your 16-bit stacks from Zeiss in `data/raw/16bit_all/`:
 
 ```bash
 mkdir -p data/raw/16bit_all
@@ -92,7 +93,7 @@ See [`docs/pipeline_guide.md`](docs/pipeline_guide.md) for all parameters and th
 
 ## How the `4stacks_5x5_norm` model was trained
 
-The model was fine-tuned from Cellpose-SAM (`cpsam`) using Cellpose's human-in-the-loop workflow. The scripts in
+The model was fine-tuned from Cellpose-SAM (`cpsam`) using Cellpose's workflow. The scripts in
 [`scripts/`](scripts/README.md) run in this order:
 
 1. **Split stacks:** [`make_splits.py`](scripts/make_splits.py) randomly assigns whole image stacks to train / val / test
@@ -125,7 +126,7 @@ training notebook:
 | Epochs | 100 |
 | Diameter | 43 px (1.5 µm / 0.035 µm/px) |
 
-**Results.** The model was trained on 4 annotated stacks (75 train patches, 25 internal validation patches, 3,913 cells).
+**Results.** The model was trained on 75 train patches, 25 internal validation patches.
 It reached **AP@0.5 = 0.724** against **0.641** for base Cellpose-SAM on a held-out validation stack.
 
 | Run | Patch size | Train patches | Cells | AP@0.5 base | AP@0.5 fine-tuned |
@@ -134,21 +135,20 @@ It reached **AP@0.5 = 0.724** against **0.641** for base Cellpose-SAM on a held-
 | `5stacks` | 2100 × 2100 | 35 | 4,641 | 0.885 | 0.842 |
 | **`4stacks_5x5_norm`** | 1265 × 1265 | 75 | 3,913 | 0.641 | **0.724** |
 
-Base AP depends on how hard each run's validation stack is, so compare ΔAP across runs with caution. Training was
-done on an NVIDIA GPU (CUDA 12.4 build, Cellpose 4.1.1, Python 3.10). Run metadata is in
+Base AP depends on how hard each run's validation stack is, so compare ΔAP across runs with caution. Run metadata is in
 `models/finetuned/4stacks_5x5_norm/run_info.json` once the model is downloaded.
 
 ---
 
-## Description of dataset
+## Description of my dataset
 
 Germ-free mice were monocolonized with an engineered *E. coli* Nissle 1917 biosensor strain carrying a low-copy
 pSC101 plasmid with three reporters:
 
 | Channel | Fluorophore | Promoter | Role |
 | --- | --- | --- | --- |
-| C1 (index 0) | mTagBFP2 | pJ23100 (constitutive) | Segmentation input + ratio denominator |
-| C2 (index 1) | mGreenLantern (GFP) | pProV-Long (osmotic stress) | Reporter, measured as GFP/BFP |
+| C1 (index 0) | mTagBFP2 | pJ23100 (constitutive) | Segmentation input |
+| C2 (index 1) | mGreenLantern (GFP) | pProV (osmotic stress) | Reporter, measured as GFP/BFP |
 | C3 (index 2) | mScarlet (RFP) | pAhpC (oxidative stress) | Reporter, measured as RFP/BFP |
 | C4 (index 3) | SYTOX Far Red | — | Host nuclear stain |
 
@@ -167,9 +167,6 @@ OCT-embedded, cryosectioned at 8–10 µm, and stained with SYTOX. For each mous
 | Naming | `<date>-C<cage>M<mouse>_<region>col_<fov>.tif`, e.g. `20260416-C3M2_Tcol_1.tif` (D/P/T = distal/proximal/transverse) |
 
 Use the **16-bit** export from ZEN, not the RGB preview. `src/io.py::load_stack()` raises an error if it receives an RGB image.
-
-**Main challenges:** fecal autofluorescence (bright in BFP, GFP and RFP at once), uneven background from non-cleared
-tissue, and small cells (~1.5 µm) in very large images.
 
 ---
 
